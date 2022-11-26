@@ -1,0 +1,14 @@
+--- # handlers playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: install python on ubuntu machines
+      action: apt name=python3 state=present
+      notify: python update
+
+  handlers:
+    - name: python update
+      action: service name=python3 state=latest

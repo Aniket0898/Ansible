@@ -1,0 +1,9 @@
+--- # task testing playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: install apache on ubuntu machines
+      action: apt name=apache2 state=installed   

@@ -1,0 +1,10 @@
+--- # task testing playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  vars:
+        pkgname: apache2
+        task:
+                - name: install apache server
+                  action: apt name'{{pkgname}}' state=present

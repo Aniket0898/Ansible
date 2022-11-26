@@ -1,0 +1,14 @@
+--- # handlers playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: install apache2 on ubuntu machines
+      action: apt name=apache2 state=present
+      notify: apache2 restart
+
+  handlers:
+    - name: apache2 restart
+      action: service name=apache2 state=restarted

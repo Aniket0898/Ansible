@@ -1,0 +1,176 @@
+Ansible server : 172.31.35.234 //ansible server
+Web server :  172.31.33.77  //node
+data server : 172.31.36.88  //node
+
+
+
+>sudo apt update
+>sudo add-apt-repository --yes --update ppa:ansible/ansible
+
+>sudo nano /etc/ansible/hosts
+>[demo]
+>172.31.33.77
+>172.31.36.88
+CTRL+X then Y and ENTER /// to move out from nano file
+
+
+
+first give read write permissions to ansible.cfg
+> vim /etc/ansible/ansible.cfg configuration file  = uncommet ansible-config init --disabled -t all > ansible.cfg 
+
+
+>sudo adduser ansible                     /// add in all servers
+>passwd :demo
+>full Name : Aniket Patil
+
+>su - ansible  //switch user in all servers
+
+to assign sudo permission to user - ansible   
+>sudo  visudo
+
+# User privilege specification  //// give sudoer permissions in all nodes
+root    ALL=(ALL:ALL) ALL
+ansible ALL=(ALL:ALL) NOPASSWD: ALL
+
+>su - ansible  //switch user in all servers
+try to install a package to check ansible is able to install packages
+
+>sudo chmod 777 /etc/ssh/sshd_config  allow all permissions to sshd_config
+>vi /etc/ssh/sshd_config
+PasswordAuthentication yes
+#PasswordAuthentication no
+#PermitEmptyPasswords no
+
+>service sshd restart   //////////////////// after change in sshd_config restart is must
+ 
+to check connectivity
+
+in ansible server switch to ansible user
+
+> ssh "private ip of any node" 
+>enter password
+
+as everytime server established a session it requires password to avod these create public key
+
+>ssh-keygen
+enter
+enter
+enter
+
+>ls -a
+>cd .ssh
+>ssh-copy-id ansible@"private ip of node"
+>paswsord
+
+>ssh "private ip of any node"  will get logged in without passwd
+
+
+**************************ANSIBLE SETUP DONE****************************************************************************************
+
+host pattern
+
+>ansible all --list-hosts //////////// to list all groups and hosts in ansible
+>ansible demo --list-hosts /////////////// to list all hosts in group demo
+>ansible demo[0] --list-host  /// to list specific no of host here it is 1st host in group demo ansible counts from 0
+>ansible demo[0:1] --list-host // list range of host in group
+
+
+***Ad hoc commands(Not preferred for configuaration maangement and deployment)preferred for basic functionalities e.g file creation***********
+
+syntax
+ansible group_name[Node no] -a "argument or linux command"
+
+>ansible demo[1] -a "touch file1"
+>ansible demo[1] -a "ls"
+>ansible demo[1] -a "ls -a"
+>ansible demo[1] -a "sudo apt update"
+>ansible demo -m setup  // details of nodes on group3
+>ansible demo -m setup -a "filter=*ipv4*"  // returns specific details of nodes in group e.g ip and related parameters
+
+
+
+***Modules*********************************************************************************************************
+
+default location
+/etc/ansible/hosts
+
+syntax
+>ansible group_name[node no] -b -m module_name -a "yml command"  // -b refers to sudo, -m refers to module, -a refers to argument
+
+e.g
+>ansible demo[1] -b -m apt -a "pkg=apache2 state=present"  ///to install package
+>ansible demo[1] -b -m apt -a "pkg=apache2 state=latest"   ///to update package
+>ansible demo[1] -b -m service -a "name=apache2 state=started"  // start pakage service
+> ansible demo[1] -b -m user -a "name=Aniket state=present"  // to create user
+>ansible demo[0-1] -b -m copy -a "src=file1 dest=/tmp"    // to copy file from source(server) to destination(nodes) //[0-1] refers range of nodes
+>ansible demo[1] -b -m service -a "name=apache2 state=stopped" 
+>ansible demo[1] -b -m apt -a "pkg=apache2 state=absent"
+
+************************Playbook***************************************************
+
+create playbook (YAML script)
+
+e.g
+>vi target.yml
+
+content in file
+
+--- # testing playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  gather_facts: yes
+
+>ansible-playbook target.yml   //run playbook    
+
+installing package with playbook
+
+>vi task.yml
+--- # task testing playbook                                // target section
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: install apache on ubuntu machines          //comment description of action or task    
+      action: apt name=apache2 state=installed       //task section
+
+>ansible-playbook task.yml 
+
+
+creating playbook with varibles
+
+--- # task testing playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  vars:
+        pkgname: apache2
+        task:
+                - name: install apache server
+                  action: apt name'{{pkgname}}' state=present   
+
+
+**************************handlers*******************************************
+
+--- # handlers playbook
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: install apache2 on ubuntu machines
+      action: apt name=apache2 state=present
+      notify: apache2 restart						//notify in task must be same to name in handlers.
+
+  handlers:                                                                 ///defines dependent actions  i.e action depends on tasks
+    - name: apache2 restart														
+      action: service name=apache2 state=restarted
+
+************************Ansible Dryrun***********************************************************************************
+
+>ansible-playbook handlers.yml --check   ////////////// to check playbook is correct or have any error    
